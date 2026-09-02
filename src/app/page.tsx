@@ -1,3 +1,6 @@
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "./login/actions";
+
 const NAV = [
   "Дашборд",
   "Расписание",
@@ -23,7 +26,22 @@ const REMINDERS = [
   { date: "22.08", title: "Ссылка на оплату", detail: "Бронь #504 · Радюк Ольга · Арт-борд «Луна»" },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let staffName = user?.email ?? "";
+  if (user) {
+    const { data: staff } = await supabase
+      .from("staff")
+      .select("full_name")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+    if (staff?.full_name) staffName = staff.full_name;
+  }
+
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line bg-card">
@@ -43,6 +61,17 @@ export default function DashboardPage() {
               </span>
             ))}
           </nav>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-ink-soft">{staffName}</span>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-md border border-line px-3 py-1.5 text-ink-soft transition hover:border-accent hover:text-accent"
+              >
+                Выйти
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 
