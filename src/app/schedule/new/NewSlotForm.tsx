@@ -32,6 +32,21 @@ export function NewSlotForm({
       action={createSlot}
       className="space-y-6 rounded-xl border border-line bg-card p-6"
     >
+      <div>
+        <label className="mb-1 block text-sm text-ink-soft" htmlFor="type">
+          Тип
+        </label>
+        <select
+          id="type"
+          name="type"
+          defaultValue="group"
+          className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+        >
+          <option value="group">Групповой</option>
+          <option value="individual">Индивидуальный</option>
+        </select>
+      </div>
+
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="mb-1 block text-sm text-ink-soft" htmlFor="date">

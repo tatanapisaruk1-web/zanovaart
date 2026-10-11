@@ -20,16 +20,45 @@ export async function createWorkshop(formData: FormData) {
     );
   }
 
-  const { error } = await supabase.from("workshops").insert({
-    name,
-    category,
-    duration_minutes,
-    base_price,
-    prepayment_amount,
-  });
+  const { data: workshop, error } = await supabase
+    .from("workshops")
+    .insert({
+      name,
+      category,
+      duration_minutes,
+      base_price,
+      prepayment_amount,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    redirect("/workshops/new?error=" + encodeURIComponent(error.message));
+  if (error || !workshop) {
+    redirect(
+      "/workshops/new?error=" + encodeURIComponent(error?.message ?? "Не удалось создать мастер-класс")
+    );
+  }
+
+  const materialIds = formData.getAll("recipe_material_id") as string[];
+  const qtys = formData.getAll("recipe_qty") as string[];
+
+  const recipeRows = materialIds
+    .map((materialId, i) => ({
+      workshop_id: workshop!.id,
+      material_id: materialId,
+      qty_per_participant: qtys[i]?.trim() ? Number(qtys[i]) : null,
+    }))
+    .filter((r) => r.material_id);
+
+  if (recipeRows.length > 0) {
+    const { error: recipeError } = await supabase
+      .from("workshop_materials")
+      .insert(recipeRows);
+
+    if (recipeError) {
+      redirect(
+        "/workshops/new?error=" + encodeURIComponent(recipeError.message)
+      );
+    }
   }
 
   revalidatePath("/workshops");

@@ -9,6 +9,11 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "отменён",
 };
 
+const TYPE_LABEL: Record<string, string> = {
+  group: "Групповой",
+  individual: "Индивидуальный",
+};
+
 export default async function SchedulePage() {
   const supabase = await createClient();
   const { data: slots } = await supabase
@@ -61,6 +66,9 @@ export default async function SchedulePage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className="rounded bg-paper px-2 py-0.5 text-xs font-medium text-ink-soft">
+                    {TYPE_LABEL[slot.type] ?? slot.type}
+                  </span>
                   <span className="rounded bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
                     {STATUS_LABEL[slot.status] ?? slot.status}
                   </span>

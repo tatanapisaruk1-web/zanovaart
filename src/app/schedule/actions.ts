@@ -12,6 +12,9 @@ export async function createSlot(formData: FormData) {
   const end_time = String(formData.get("end_time") ?? "");
   const location = String(formData.get("location") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+  const type = String(formData.get("type") ?? "group") === "individual"
+    ? "individual"
+    : "group";
 
   const workshopIds = formData.getAll("offering_workshop_id") as string[];
   const capacities = formData.getAll("offering_capacity") as string[];
@@ -31,7 +34,7 @@ export async function createSlot(formData: FormData) {
 
   const { data: slot, error: slotError } = await supabase
     .from("slots")
-    .insert({ date, start_time, end_time, location, note })
+    .insert({ date, start_time, end_time, location, note, type })
     .select("id")
     .single();
 

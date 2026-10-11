@@ -7,7 +7,7 @@ export default async function WorkshopsPage() {
   const supabase = await createClient();
   const { data: workshops } = await supabase
     .from("workshops")
-    .select("*")
+    .select("*, workshop_materials(qty_per_participant, materials(name, unit))")
     .order("name");
 
   return (
@@ -40,6 +40,7 @@ export default async function WorkshopsPage() {
                 <th className="px-5 py-3 font-medium">Длительность</th>
                 <th className="px-5 py-3 font-medium">Цена</th>
                 <th className="px-5 py-3 font-medium">Предоплата</th>
+                <th className="px-5 py-3 font-medium">Рецепт</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -66,6 +67,24 @@ export default async function WorkshopsPage() {
                   <td className="px-5 py-3 text-ink-soft">
                     {w.prepayment_amount} BYN
                   </td>
+                  <td className="px-5 py-3 text-ink-soft">
+                    {w.workshop_materials && w.workshop_materials.length > 0 ? (
+                      <span>
+                        {w.workshop_materials
+                          .map(
+                            (rm: any) =>
+                              `${rm.materials?.name}${
+                                rm.qty_per_participant != null
+                                  ? ` (${rm.qty_per_participant} ${rm.materials?.unit ?? ""})`
+                                  : ""
+                              }`
+                          )
+                          .join(", ")}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <form action={toggleWorkshopActive}>
                       <input type="hidden" name="id" value={w.id} />
@@ -86,7 +105,7 @@ export default async function WorkshopsPage() {
               ))}
               {(!workshops || workshops.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-ink-soft">
+                  <td colSpan={7} className="px-5 py-8 text-center text-ink-soft">
                     Пока нет ни одного мастер-класса — добавьте первый.
                   </td>
                 </tr>
