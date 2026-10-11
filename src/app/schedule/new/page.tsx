@@ -9,11 +9,20 @@ export default async function NewSlotPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const { data: workshops } = await supabase
-    .from("workshops")
-    .select("id, name, base_price, prepayment_amount")
-    .eq("is_active", true)
-    .order("name");
+  const [{ data: workshops }, { data: instructors }] = await Promise.all([
+    supabase
+      .from("workshops")
+      .select(
+        "id, name, duration_minutes, base_price, prepayment_amount, workshop_individual_prices(guests_count, price)"
+      )
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("instructors")
+      .select("id, full_name")
+      .eq("is_active", true)
+      .order("full_name"),
+  ]);
 
   return (
     <div className="min-h-screen bg-paper">
@@ -35,7 +44,11 @@ export default async function NewSlotPage({
             , чтобы можно было создать слот.
           </div>
         ) : (
-          <NewSlotForm workshops={workshops} error={error} />
+          <NewSlotForm
+            workshops={workshops}
+            instructors={instructors ?? []}
+            error={error}
+          />
         )}
       </main>
     </div>

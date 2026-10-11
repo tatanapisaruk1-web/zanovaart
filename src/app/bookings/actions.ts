@@ -29,6 +29,10 @@ export async function createBooking(formData: FormData) {
   const participants_count = Number(formData.get("participants_count") ?? 1);
   const note_for_instructor =
     String(formData.get("note_for_instructor") ?? "").trim() || null;
+  const participantNames = String(formData.get("participant_names") ?? "")
+    .split("\n")
+    .map((n) => n.trim())
+    .filter(Boolean);
 
   if (!slot_offering_id || !client_phone || !participants_count) {
     redirect(
@@ -41,9 +45,50 @@ export async function createBooking(formData: FormData) {
 
   const { data: offering } = await supabase
     .from("slot_offerings")
-    .select("price, prepayment_amount")
+    .select("price, prepayment_amount, capacity, slots(type)")
     .eq("id", slot_offering_id)
     .single();
+
+  if (!offering) {
+    redirect(
+      "/bookings/new?error=" + encodeURIComponent("Слот с этим видом МК не найден")
+    );
+  }
+
+  const slotType = (offering as any)?.slots?.type ?? "group";
+
+  const { data: existingBookings } = await supabase
+    .from("bookings")
+    .select("participants_count, status")
+    .eq("slot_offering_id", slot_offering_id)
+    .neq("status", "cancelled");
+
+  const alreadyBooked = (existingBookings ?? []).reduce(
+    (sum, b) => sum + (b.participants_count ?? 0),
+    0
+  );
+
+  if (slotType === "individual") {
+    if ((existingBookings ?? []).length > 0) {
+      redirect(
+        "/bookings/new?error=" +
+          encodeURIComponent(
+            "На индивидуальный слот можно добавить только одну бронь — сюда уже кто-то записан"
+          )
+      );
+    }
+  } else {
+    const capacity = offering?.capacity ?? 0;
+    if (alreadyBooked + participants_count > capacity) {
+      const free = Math.max(capacity - alreadyBooked, 0);
+      redirect(
+        "/bookings/new?error=" +
+          encodeURIComponent(
+            `Недостаточно свободных мест: осталось ${free} из ${capacity}`
+          )
+      );
+    }
+  }
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
@@ -66,17 +111,21 @@ export async function createBooking(formData: FormData) {
     );
   }
 
-  const participants = Array.from({ length: participants_count }).map(() => ({
-    booking_id: booking!.id,
-    price_share: offering?.price ?? 0,
-    prepayment_amount: offering?.prepayment_amount ?? 0,
-    paid_amount: 0,
-    status: "unpaid",
-  }));
+  const participants = Array.from({ length: participants_count }).map(
+    (_, i) => ({
+      booking_id: booking!.id,
+      participant_name: participantNames[i] ?? null,
+      price_share: offering?.price ?? 0,
+      prepayment_amount: offering?.prepayment_amount ?? 0,
+      paid_amount: 0,
+      status: "unpaid",
+    })
+  );
 
   await supabase.from("booking_participants").insert(participants);
 
   revalidatePath("/bookings");
+  revalidatePath("/schedule");
   revalidatePath("/");
   redirect("/bookings");
 }

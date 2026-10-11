@@ -12,16 +12,33 @@ export default async function NewBookingPage({
 
   const { data: slots } = await supabase
     .from("slots")
-    .select("date, start_time, slot_offerings(id, price, capacity, workshops(name))")
+    .select(
+      "date, start_time, type, slot_offerings(id, price, capacity, workshops(name), bookings(participants_count, status))"
+    )
     .eq("status", "open")
     .order("date")
     .order("start_time");
 
   const options = (slots ?? []).flatMap((slot: any) =>
-    (slot.slot_offerings ?? []).map((o: any) => ({
-      id: o.id,
-      label: `${formatDate(slot.date)} ${slot.start_time?.slice(0, 5)} · ${o.workshops?.name} · ${o.price} BYN`,
-    }))
+    (slot.slot_offerings ?? [])
+      .map((o: any) => {
+        const activeBookings = (o.bookings ?? []).filter(
+          (b: any) => b.status !== "cancelled"
+        );
+        const booked = activeBookings.reduce(
+          (sum: number, b: any) => sum + (b.participants_count ?? 0),
+          0
+        );
+        const free = Math.max(o.capacity - booked, 0);
+        const full =
+          slot.type === "individual" ? activeBookings.length > 0 : free <= 0;
+        return {
+          id: o.id,
+          full,
+          label: `${formatDate(slot.date)} ${slot.start_time?.slice(0, 5)} · ${o.workshops?.name} · свободно ${free} из ${o.capacity} · ${o.price} BYN`,
+        };
+      })
+      .filter((o: any) => !o.full)
   );
 
   return (
@@ -32,11 +49,11 @@ export default async function NewBookingPage({
 
         {options.length === 0 ? (
           <div className="rounded-xl border border-line bg-card p-6 text-sm text-ink-soft">
-            Нет открытых слотов с видами МК. Сначала создайте{" "}
+            Нет свободных слотов с видами МК. Сначала создайте{" "}
             <a href="/schedule/new" className="text-accent underline">
               слот
             </a>
-            .
+            , либо все существующие уже заняты.
           </div>
         ) : (
           <form
@@ -60,7 +77,7 @@ export default async function NewBookingPage({
                 <option value="" disabled>
                   — выбрать —
                 </option>
-                {options.map((o) => (
+                {options.map((o: any) => (
                   <option key={o.id} value={o.id}>
                     {o.label}
                   </option>
@@ -91,6 +108,22 @@ export default async function NewBookingPage({
                 min={1}
                 defaultValue={1}
                 required
+                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label
+                className="mb-1 block text-sm text-ink-soft"
+                htmlFor="participant_names"
+              >
+                Имена участников (необязательно, по одному на строку)
+              </label>
+              <textarea
+                id="participant_names"
+                name="participant_names"
+                rows={2}
+                placeholder={"Участник 1\nУчастник 2"}
                 className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
               />
             </div>

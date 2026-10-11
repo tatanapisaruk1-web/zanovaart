@@ -7,7 +7,9 @@ export default async function WorkshopsPage() {
   const supabase = await createClient();
   const { data: workshops } = await supabase
     .from("workshops")
-    .select("*, workshop_materials(qty_per_participant, materials(name, unit))")
+    .select(
+      "*, workshop_materials(qty_per_participant, materials(name, unit)), workshop_individual_prices(guests_count, price)"
+    )
     .order("name");
 
   return (
@@ -36,11 +38,11 @@ export default async function WorkshopsPage() {
             <thead>
               <tr className="border-b border-line text-left text-ink-soft">
                 <th className="px-5 py-3 font-medium">Название</th>
-                <th className="px-5 py-3 font-medium">Категория</th>
                 <th className="px-5 py-3 font-medium">Длительность</th>
-                <th className="px-5 py-3 font-medium">Цена</th>
+                <th className="px-5 py-3 font-medium">Цена (групповой)</th>
+                <th className="px-5 py-3 font-medium">Цены (индивидуальный)</th>
                 <th className="px-5 py-3 font-medium">Предоплата</th>
-                <th className="px-5 py-3 font-medium">Рецепт</th>
+                <th className="px-5 py-3 font-medium">Оснащение</th>
                 <th className="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -56,13 +58,25 @@ export default async function WorkshopsPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-ink-soft">
-                    {w.category ?? "—"}
-                  </td>
-                  <td className="px-5 py-3 text-ink-soft">
                     {w.duration_minutes} мин
                   </td>
                   <td className="px-5 py-3 text-ink-soft">
                     {w.base_price} BYN
+                  </td>
+                  <td className="px-5 py-3 text-ink-soft">
+                    {w.workshop_individual_prices &&
+                    w.workshop_individual_prices.length > 0 ? (
+                      <span>
+                        {[...w.workshop_individual_prices]
+                          .sort((a: any, b: any) => a.guests_count - b.guests_count)
+                          .map(
+                            (p: any) => `${p.guests_count} гост.: ${p.price} BYN`
+                          )
+                          .join(", ")}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-5 py-3 text-ink-soft">
                     {w.prepayment_amount} BYN
@@ -105,7 +119,7 @@ export default async function WorkshopsPage() {
               ))}
               {(!workshops || workshops.length === 0) && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-ink-soft">
+                  <td colSpan={8} className="px-5 py-8 text-center text-ink-soft">
                     Пока нет ни одного мастер-класса — добавьте первый.
                   </td>
                 </tr>

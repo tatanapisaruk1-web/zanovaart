@@ -27,13 +27,22 @@ export function NewWorkshopForm({
   const removeRow = (key: number) =>
     setRows((r) => r.filter((k) => k !== key));
 
+  const [priceRows, setPriceRows] = useState<number[]>([]);
+  const [nextPriceKey, setNextPriceKey] = useState(0);
+
+  const addPriceRow = () => {
+    setPriceRows((r) => [...r, nextPriceKey]);
+    setNextPriceKey((k) => k + 1);
+  };
+  const removePriceRow = (key: number) =>
+    setPriceRows((r) => r.filter((k) => k !== key));
+
   return (
     <form
       action={createWorkshop}
       className="space-y-4 rounded-xl border border-line bg-card p-6"
     >
       <Field label="Название" name="name" required />
-      <Field label="Категория" name="category" placeholder="например, керамика" />
       <div className="grid grid-cols-2 gap-4">
         <Field
           label="Длительность, мин"
@@ -42,7 +51,7 @@ export function NewWorkshopForm({
           required
         />
         <Field
-          label="Базовая цена, BYN"
+          label="Цена базовая (групповой), BYN"
           name="base_price"
           type="number"
           step="0.01"
@@ -60,7 +69,38 @@ export function NewWorkshopForm({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <span className="text-sm font-medium text-ink">
-            Рецепт — материалы со склада на одного участника
+            Цена для индивидуального формата — по количеству гостей
+          </span>
+          <button
+            type="button"
+            onClick={addPriceRow}
+            className="text-sm text-accent underline"
+          >
+            + добавить цену
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {priceRows.map((rowKey) => (
+            <IndividualPriceRow
+              key={rowKey}
+              onRemove={() => removePriceRow(rowKey)}
+            />
+          ))}
+          {priceRows.length === 0 && (
+            <p className="text-sm text-ink-soft">
+              Не добавлено — у мастер-класса пока нет индивидуального
+              формата. Для каждого количества гостей задайте свою цену,
+              она потом подставится автоматически при создании слота.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-ink">
+            Оснащение — материалы со склада на одного участника
           </span>
           <button
             type="button"
@@ -90,7 +130,7 @@ export function NewWorkshopForm({
             ))}
             {rows.length === 0 && (
               <p className="text-sm text-ink-soft">
-                Материалы не добавлены — рецепт можно заполнить позже.
+                Материалы не добавлены — оснащение можно заполнить позже.
               </p>
             )}
           </div>
@@ -106,6 +146,42 @@ export function NewWorkshopForm({
         Создать
       </button>
     </form>
+  );
+}
+
+function IndividualPriceRow({ onRemove }: { onRemove: () => void }) {
+  return (
+    <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 rounded-lg bg-paper p-3">
+      <div>
+        <label className="mb-1 block text-xs text-ink-soft">
+          Кол-во гостей
+        </label>
+        <input
+          name="ind_guests_count"
+          type="number"
+          min={1}
+          step="1"
+          className="w-full rounded-md border border-line bg-card px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-ink-soft">Цена, BYN</label>
+        <input
+          name="ind_price"
+          type="number"
+          step="0.01"
+          min={0}
+          className="w-full rounded-md border border-line bg-card px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded-md border border-line px-2 py-1.5 text-xs text-ink-soft hover:border-red-400 hover:text-red-600"
+      >
+        убрать
+      </button>
+    </div>
   );
 }
 

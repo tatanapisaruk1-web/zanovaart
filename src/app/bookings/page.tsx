@@ -4,11 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { updateBookingStatus } from "./actions";
 
 const STATUS_LABEL: Record<string, string> = {
-  not_confirmed: "не подтверждено",
-  confirmed: "подтверждено",
-  completed: "завершено",
-  cancelled: "отменено",
-  no_show: "не пришёл",
+  not_confirmed: "Ожидает подтверждения (до предоплаты)",
+  confirmed: "Подтверждено",
+  cancelled: "Отменено",
 };
 
 export default async function BookingsPage() {

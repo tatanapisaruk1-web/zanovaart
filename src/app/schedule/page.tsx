@@ -18,7 +18,9 @@ export default async function SchedulePage() {
   const supabase = await createClient();
   const { data: slots } = await supabase
     .from("slots")
-    .select("*, slot_offerings(*, workshops(name))")
+    .select(
+      "*, slot_instructors(instructors(full_name)), slot_offerings(*, workshops(name), bookings(participants_count, status))"
+    )
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -59,9 +61,13 @@ export default async function SchedulePage() {
                     {slot.start_time?.slice(0, 5)}–
                     {slot.end_time?.slice(0, 5)}
                   </span>
-                  {slot.location && (
+                  {slot.slot_instructors && slot.slot_instructors.length > 0 && (
                     <span className="ml-2 text-sm text-ink-soft">
-                      · {slot.location}
+                      ·{" "}
+                      {slot.slot_instructors
+                        .map((si: any) => si.instructors?.full_name)
+                        .filter(Boolean)
+                        .join(", ")}
                     </span>
                   )}
                 </div>
@@ -87,16 +93,28 @@ export default async function SchedulePage() {
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2">
-                {(slot.slot_offerings ?? []).map((o: any) => (
-                  <div key={o.id} className="rounded-lg bg-paper px-3 py-2 text-sm">
-                    <span className="font-medium text-ink">
-                      {o.workshops?.name}
-                    </span>
-                    <span className="ml-2 text-ink-soft">
-                      до {o.capacity} чел · {o.price} BYN
-                    </span>
-                  </div>
-                ))}
+                {(slot.slot_offerings ?? []).map((o: any) => {
+                  const booked = (o.bookings ?? [])
+                    .filter((b: any) => b.status !== "cancelled")
+                    .reduce(
+                      (sum: number, b: any) => sum + (b.participants_count ?? 0),
+                      0
+                    );
+                  const free = Math.max(o.capacity - booked, 0);
+                  return (
+                    <div
+                      key={o.id}
+                      className="rounded-lg bg-paper px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-ink">
+                        {o.workshops?.name}
+                      </span>
+                      <span className="ml-2 text-ink-soft">
+                        свободно {free} из {o.capacity} · {o.price} BYN
+                      </span>
+                    </div>
+                  );
+                })}
                 {(!slot.slot_offerings || slot.slot_offerings.length === 0) && (
                   <p className="text-sm text-ink-soft">
                     Нет видов МК в этом слоте

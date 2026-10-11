@@ -10,7 +10,6 @@ export async function createSlot(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   const start_time = String(formData.get("start_time") ?? "");
   const end_time = String(formData.get("end_time") ?? "");
-  const location = String(formData.get("location") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
   const type = String(formData.get("type") ?? "group") === "individual"
     ? "individual"
@@ -34,7 +33,7 @@ export async function createSlot(formData: FormData) {
 
   const { data: slot, error: slotError } = await supabase
     .from("slots")
-    .insert({ date, start_time, end_time, location, note, type })
+    .insert({ date, start_time, end_time, note, type })
     .select("id")
     .single();
 
@@ -61,6 +60,19 @@ export async function createSlot(formData: FormData) {
 
   if (offeringsError) {
     redirect("/schedule/new?error=" + encodeURIComponent(offeringsError.message));
+  }
+
+  const instructorIds = (formData.getAll("instructor_id") as string[]).filter(
+    (id) => id
+  );
+
+  if (instructorIds.length > 0) {
+    await supabase.from("slot_instructors").insert(
+      instructorIds.map((instructor_id) => ({
+        slot_id: slot!.id,
+        instructor_id,
+      }))
+    );
   }
 
   revalidatePath("/schedule");

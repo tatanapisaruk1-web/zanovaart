@@ -8,7 +8,6 @@ export async function createWorkshop(formData: FormData) {
   const supabase = await createClient();
 
   const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "").trim() || null;
   const duration_minutes = Number(formData.get("duration_minutes") ?? 0);
   const base_price = Number(formData.get("base_price") ?? 0);
   const prepayment_amount = Number(formData.get("prepayment_amount") ?? 0);
@@ -24,7 +23,6 @@ export async function createWorkshop(formData: FormData) {
     .from("workshops")
     .insert({
       name,
-      category,
       duration_minutes,
       base_price,
       prepayment_amount,
@@ -57,6 +55,33 @@ export async function createWorkshop(formData: FormData) {
     if (recipeError) {
       redirect(
         "/workshops/new?error=" + encodeURIComponent(recipeError.message)
+      );
+    }
+  }
+
+  const guestCounts = formData.getAll("ind_guests_count") as string[];
+  const indPrices = formData.getAll("ind_price") as string[];
+
+  const priceRows = guestCounts
+    .map((gc, i) => ({
+      guests_count: gc?.trim() ? Number(gc) : null,
+      price: indPrices[i]?.trim() ? Number(indPrices[i]) : null,
+    }))
+    .filter((r) => r.guests_count && r.guests_count > 0 && r.price !== null)
+    .map((r) => ({
+      workshop_id: workshop!.id,
+      guests_count: r.guests_count as number,
+      price: r.price as number,
+    }));
+
+  if (priceRows.length > 0) {
+    const { error: priceError } = await supabase
+      .from("workshop_individual_prices")
+      .insert(priceRows);
+
+    if (priceError) {
+      redirect(
+        "/workshops/new?error=" + encodeURIComponent(priceError.message)
       );
     }
   }
